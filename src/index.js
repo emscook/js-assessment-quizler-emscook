@@ -32,19 +32,24 @@ const askForQuestions = [
   }
 ]
 
-const createQuiz = title =>
-  prompt(askForQuestions)
-    .then(answer =>
-      // TODO finish createQuiz logic
-      console.log(answer)
-    )
+const createQuiz = title => {
+  return prompt(askForQuestions)
+    .then(answer => {
+      answer['numQuestions'] = parseInt(answer['numQuestions'])
+      answer['numChoices'] = parseInt(answer['numChoices'])
+      return answer
+    })
     .catch(err => console.log('Error creating the quiz.', err))
-
-// const takeQuiz = (title, output) =>
-// TODO implement takeQuiz
-
-// const takeRandomQuiz = (quizes, output, n) =>
-// TODO implement takeRandomQuiz
+    .then(ans => {
+      return prompt(createPrompt(ans))
+    })
+    .then(ans => {
+      return createQuestions(ans)
+    })
+    .then(ans => {
+      writeFile(title, ans)
+    })
+}
 
 cli
   .command(
@@ -52,8 +57,7 @@ cli
     'Creates a new quiz and saves it to the given fileName'
   )
   .action(function (input, callback) {
-    // TODO update create command for correct functionality
-    return createQuiz(input.fileName)
+    return createQuiz(input.fileName).then(ans => {})
   })
 
 cli
@@ -62,7 +66,13 @@ cli
     'Loads a quiz and saves the users answers to the given outputFile'
   )
   .action(function (input, callback) {
-    // TODO implement functionality for taking a quiz
+    var ourGuy = input.fileName
+    var theirGuy = input.outputFile
+    return readFile(ourGuy).then(valA => {
+      return prompt(valA).then(answers => {
+        return writeFile(theirGuy, answers).then(a => a)
+      })
+    })
   })
 
 cli
@@ -73,7 +83,20 @@ cli
       ' Then, saves the users answers to the given outputFile'
   )
   .action(function (input, callback) {
-    // TODO implement the functionality for taking a random quiz
+    let theirGuy = input.outputFile
+    let ourGuy = input.fileNames
+    return Promise.all(
+      ourGuy.map(a => {
+        return readFile(a)
+      })
+    ).then(ecks => {
+      ecks = [].concat(...ecks) // flatten questions
+      ecks = chooseRandom(ecks, ecks.length) // shuffle questions
+      ecks = chooseRandom(ecks) // pick random number of questions
+      return prompt(ecks).then(answers => {
+        return writeFile(theirGuy, answers).then(a => a)
+      })
+    })
   })
 
 cli.delimiter(cli.chalk['yellow']('quizler>')).show()
